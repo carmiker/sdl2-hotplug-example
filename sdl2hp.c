@@ -23,6 +23,7 @@ PERFORMANCE OF THIS SOFTWARE.
 #define MAXPORTS 4
 
 static SDL_Joystick *joystick[MAXPORTS];
+static SDL_Haptic *haptic[MAXPORTS];
 static int jsports[MAXPORTS];
 static int jsiid[MAXPORTS];
 
@@ -30,7 +31,7 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
     int running = 1;
 
-    SDL_Init(SDL_INIT_JOYSTICK);
+    SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC);
 
     while (running) {
         while (SDL_PollEvent(&event)) {
@@ -61,6 +62,18 @@ int main(int argc, char *argv[]) {
                         SDL_JoystickGetPlayerIndex(joystick[port])
                     );
 
+                    if (SDL_JoystickIsHaptic(joystick[port])) {
+                        haptic[port] =
+                            SDL_HapticOpenFromJoystick(joystick[port]);
+                        SDL_HapticRumbleInit(haptic[port]) < 0 ?
+                        printf("Force Feedback Enable Failed: %s\n",
+                            SDL_GetError()) :
+                        printf("Force Feedback Enabled\n");
+                    }
+                    else {
+                        printf("Device is not haptic\n");
+                    }
+
                     printf("Ports: %d %d %d %d\n\n",
                         jsports[0], jsports[1], jsports[2], jsports[3]
                     );
@@ -73,6 +86,8 @@ int main(int argc, char *argv[]) {
                     for (int i = 0; i < MAXPORTS; ++i) {
                         // If it's the one that got disconnected...
                         if (jsiid[i] == id) {
+                            if (SDL_JoystickIsHaptic(joystick[i]))
+                                SDL_HapticClose(haptic[i]);
                             jsports[i] = 0; // Notify that this is unplugged
                             printf("Joystick %d Disconnected\n", i);
                             SDL_JoystickClose(joystick[i]);
